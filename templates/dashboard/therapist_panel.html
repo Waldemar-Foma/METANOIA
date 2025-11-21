@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Панель терапевта{% endblock %}
+
+{% block content %}
+<div class="therapist-panel">
+    <div class="panel-header">
+        <h1><i class="fas fa-user-md"></i> Панель терапевта</h1>
+        <p>Управление сессиями и мониторинг в реальном времени</p>
+    </div>
+
+    <div class="grid grid-2">
+        <!-- Активные пациенты -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-users"></i> Мои пациенты
+                </h3>
+                <span class="badge">{{ patients|length }}</span>
+            </div>
+            <div class="patients-grid">
+                {% for patient, sessions in patients %}
+                <div class="patient-card">
+                    <div class="patient-header">
+                        <div class="patient-info">
+                            <div class="patient-name">{{ patient.name }}</div>
+                            <div class="patient-id">{{ patient.user_id }}</div>
+                        </div>
+                        <div class="patient-status">
+                            <span class="status-badge status-active">
+                                <i class="fas fa-circle"></i> Активен
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="patient-stats">
+                        <div class="stat">
+                            <div class="stat-value">{{ sessions|length }}</div>
+                            <div class="stat-label">Сессии</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">
+                                {% if sessions %}
+                                    {{ "%.1f"|format((sessions|sum(attribute='pre_sud') - sessions|sum(attribute='post_sud')) / sessions|length) }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </div>
+                            <div class="stat-label">ΔSUD</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">
+                                {% if sessions %}
+                                    {{ sessions[-1].post_sud }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                            <div class="stat-label">Посл. SUD</div>
+                        </div>
+                    </div>
+                    
+                    <div class="patient-actions">
+                        <a href="{{ url_for('patient_detail', patient_id=patient.user_id) }}" 
+                           class="btn btn-outline btn-sm">
+                            <i class="fas fa-chart-line"></i> Аналитика
+                        </a>
+                        <button class="btn btn-primary btn-sm" onclick="startSession('{{ patient.user_id }}')">
+                            <i class="fas fa-play"></i> Сессия
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Быстрый контроль -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-sliders-h"></i> Быстрый контроль
+                </h3>
+            </div>
+            <div class="quick-controls">
+                <!-- Интенсивность -->
+                <div class="control-group">
+                    <label>Интенсивность экспозиции</label>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="100" value="50" class="slider" id="intensitySlider">
+                        <div class="slider-labels">
+                            <span>Низкая</span>
+                            <span>Высокая</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Экстренные действия -->
+                <div class="control-group">
+                    <label>Экстренные действия</label>
+                    <div class="emergency-buttons">
+                        <button class="btn btn-danger" id="emergencyStop">
+                            <i class="fas fa-stop"></i> Экстренная остановка
+                        </button>
+                        <button class="btn btn-warning" id="quickPause">
+                            <i class="fas fa-pause"></i> Быстрая пауза
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Быстрый переход -->
+                <div class="control-group">
+                    <label>Быстрый переход к</label>
+                    <div class="quick-transition-buttons">
+                        <button class="btn btn-outline" data-module="emdr">
+                            <i class="fas fa-eye"></i> EMDR
+                        </button>
+                        <button class="btn btn-outline" data-module="safe_place">
+                            <i class="fas fa-umbrella-beach"></i> Безопасное место
+                        </button>
+                        <button class="btn btn-outline" data-module="exposure">
+                            <i class="fas fa-mountain"></i> Экспозиция
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика эффективности -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-chart-bar"></i> Эффективность терапии
+        </h3>
+    </div>
+    <div class="grid grid-3">
+        <div class="metric-card">
+            <div class="metric-value">{{ "%.1f"|format(average_sud_reduction) }}</div>
+            <div class="metric-label">Среднее снижение SUD</div>
+            <div class="metric-trend positive">
+                <i class="fas fa-arrow-up"></i> 12%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">
+                {% if patients %}
+                    {% set session_count = 0 %}
+                    {% for patient, sessions in patients %}
+                        {% set session_count = session_count + sessions|length %}
+                    {% endfor %}
+                    {{ (session_count / patients|length)|round(1) }}
+                {% else %}
+                    0
+                {% endif %}
+            </div>
+            <div class="metric-label">Среднее сессий на пациента</div>
+            <div class="metric-trend positive">
+                <i class="fas fa-arrow-up"></i> 8%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">78%</div>
+            <div class="metric-label">Успешных завершений</div>
+            <div class="metric-trend positive">
+                <i class="fas fa-arrow-up"></i> 5%
+            </div>
+        </div>
+    </div>
+</div>  
+    <!-- Умные пресеты -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-magic"></i> Умные пресеты интерфейса
+            </h3>
+        </div>
+        <div class="presets-grid">
+            {% for patient, sessions in patients if sessions|length >= 3 %}
+                {% set prefs = data_manager.therapy_manager.get_patient_preferences(patient.user_id) %}
+                <div class="preset-card">
+                    <div class="preset-header">
+                        <div class="preset-patient">{{ patient.name }}</div>
+                        <div class="preset-badge">Авто</div>
+                    </div>
+                    <div class="preset-recommendation">
+                        {% if prefs.favorite_module %}
+                            <strong>Рекомендуется:</strong> {{ prefs.favorite_module }}
+                        {% endif %}
+                    </div>
+                    <div class="preset-actions">
+                        <button class="btn btn-outline btn-sm" onclick="applyPreset('{{ patient.user_id }}')">
+                            Применить
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="editPreset('{{ patient.user_id }}')">
+                            Настроить
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.panel-header {
+    margin-bottom: 2rem;
+}
+
+.panel-header h1 {
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.patients-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.patient-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.patient-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.patient-info .patient-name {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.patient-info .patient-id {
+    font-size: 0.875rem;
+    color: var(--secondary);
+}
+
+.patient-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.patient-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.quick-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 0.875rem;
+}
+
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.slider {
+    width: 100%;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--secondary);
+}
+
+.emergency-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.quick-transition-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.metric-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.metric-label {
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+}
+
+.metric-trend {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.metric-trend.positive {
+    color: var(--success);
+}
+
+.metric-trend.negative {
+    color: var(--danger);
+}
+
+.presets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.preset-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.preset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.preset-patient {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.preset-badge {
+    background: var(--primary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.preset-recommendation {
+    margin-bottom: 1rem;
+    color: var(--secondary);
+}
+
+.preset-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+</style>
+
+<script>
+function startSession(patientId) {
+    // Запуск VR-сессии для пациента
+    alert(`Запуск сессии для пациента ${patientId}`);
+    // Здесь будет интеграция с VR-системой
+}
+
+function applyPreset(patientId) {
+    // Применение пресета настроек
+    alert(`Применение пресета для пациента ${patientId}`);
+}
+
+function editPreset(patientId) {
+    // Редактирование пресета
+    alert(`Редактирование пресета для пациента ${patientId}`);
+}
+
+// Обработчики быстрого контроля
+document.getElementById('emergencyStop').addEventListener('click', function() {
+    if (confirm('Экстренная остановка всех активных сессий. Продолжить?')) {
+        alert('Все сессии остановлены');
+    }
+});
+
+document.getElementById('quickPause').addEventListener('click', function() {
+    alert('Все сессии поставлены на паузу');
+});
+
+// Обработчики быстрых переходов
+document.querySelectorAll('[data-module]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const module = this.dataset.module;
+        alert(`Быстрый переход к модулю: ${module}`);
+    });
+});
+</script>
+{% endblock %}

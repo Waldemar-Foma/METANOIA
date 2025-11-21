@@ -1,0 +1,34 @@
+{
+  "users": [
+    {
+      "user_id": "TH001",
+      "username": "therapist",
+      "password_hash": "f84bd2ae7cfba105740cb12293cce91115b986c699c7f84b23dd9bfedf0429e9",
+      "role": "therapist",
+      "name": "Др. Смирнова",
+      "therapist_id": null,
+      "created_date": "2025-11-18T10:55:23.078476",
+      "is_active": true
+    },
+    {
+      "user_id": "PT001",
+      "username": "pt001234",
+      "password_hash": "9b8769a4a742959a2d0298c36fb70623f2dfacda8436237df08d8dfd5b37374c",
+      "role": "patient",
+      "name": "Иван Петров",
+      "therapist_id": "TH001",
+      "created_date": "2025-11-18T10:55:23.078476",
+      "is_active": true
+    },
+    {
+      "user_id": "PT002",
+      "username": "pt002345",
+      "password_hash": "9b8769a4a742959a2d0298c36fb70623f2dfacda8436237df08d8dfd5b37374c",
+      "role": "patient",
+      "name": "Мария Сидорова",
+      "therapist_id": "TH001",
+      "created_date": "2025-11-18T10:55:23.078476",
+      "is_active": true
+    }
+  ]
+}

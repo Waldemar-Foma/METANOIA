@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1 class="page-title">
+        <i class="fas fa-cogs"></i> Панель администратора
+    </h1>
+    <p class="page-subtitle">Управление пользователями и системой</p>
+</div>
+
+<div class="admin-stats">
+    <div class="card">
+        <div class="stat">
+            <div class="stat-value">{{ users|length }}</div>
+            <div class="stat-label">Всего пользователей</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="stat">
+            <div class="stat-value">{{ users|selectattr('role', 'equalto', 'patient')|list|length }}</div>
+            <div class="stat-label">Пациентов</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="stat">
+            <div class="stat-value">{{ users|selectattr('role', 'equalto', 'therapist')|list|length }}</div>
+            <div class="stat-label">Терапевтов</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="stat">
+            <div class="stat-value">{{ users|selectattr('role', 'equalto', 'superadmin')|list|length }}</div>
+            <div class="stat-label">Администраторов</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-users"></i> Управление пользователями
+        </h2>
+    </div>
+    
+    <div class="user-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Роль</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.user_id }}</strong></td>
+                    <td>{{ user.name }}</td>
+                    <td><code>{{ user.username }}</code></td>
+                    <td>
+                        <span class="role-badge role-{{ user.role }}">
+                            {{ user.role }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                        <span class="status-badge status-active">
+                            <i class="fas fa-check-circle"></i> Активен
+                        </span>
+                        {% else %}
+                        <span class="status-badge status-inactive">
+                            <i class="fas fa-times-circle"></i> Неактивен
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('toggle_user_status', user_id=user.user_id) }}" 
+                           class="btn btn-sm {{ 'btn-outline' if user.is_active else 'btn-primary' }}">
+                            <i class="fas {{ 'fa-ban' if user.is_active else 'fa-check' }}"></i>
+                            {{ 'Деактивировать' if user.is_active else 'Активировать' }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-plus-circle"></i> Быстрые действия
+        </h2>
+    </div>
+    <div class="grid grid-3">
+        <button class="btn btn-outline" onclick="alert('Функция в разработке')">
+            <i class="fas fa-user-md"></i> Создать терапевта
+        </button>
+        <button class="btn btn-outline" onclick="alert('Функция в разработке')">
+            <i class="fas fa-chart-bar"></i> Статистика системы
+        </button>
+        <button class="btn btn-outline" onclick="alert('Функция в разработке')">
+            <i class="fas fa-download"></i> Экспорт данных
+        </button>
+    </div>
+</div>
+{% endblock %}

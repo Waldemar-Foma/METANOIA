@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пациентами{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-users"></i> Управление пациентами
+    </h1>
+    <p class="page-subtitle">Создание и управление пациентами системы</p>
+</div>
+
+<!-- Форма создания пациента -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-user-plus"></i> Создать нового пациента
+        </h2>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('create_patient') }}" class="form-inline">
+            <div class="form-group" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <input type="text" name="name" class="form-input" 
+                       placeholder="Введите имя пациента" required 
+                       style="min-width: 300px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Создать пациента
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список пациентов -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-list"></i> Список пациентов
+        </h2>
+        <span class="badge">{{ patients|length }} пациентов</span>
+    </div>
+    
+    <div class="data-table">
+        {% if patients %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID пациента</th>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Пароль</th>
+                    <th>Статус</th>
+                    <th>Дата создания</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>
+                        <strong>{{ patient.user_id }}</strong>
+                    </td>
+                    <td>{{ patient.name }}</td>
+                    <td>
+                        <code class="user-credentials">{{ patient.username }}</code>
+                        <button class="btn-copy" data-text="{{ patient.username }}" title="Скопировать логин">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                    <td>
+                        {% if patient_credentials.get(patient.user_id) %}
+                        <code class="user-credentials">{{ patient_credentials[patient.user_id] }}</code>
+                        <button class="btn-copy" data-text="{{ patient_credentials[patient.user_id] }}" title="Скопировать пароль">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-muted">••••••••</span>
+                        <button class="btn btn-sm btn-outline btn-regenerate" 
+                                data-patient-id="{{ patient.user_id }}" 
+                                data-patient-name="{{ patient.name }}"
+                                title="Сгенерировать новый пароль">
+                            <i class="fas fa-refresh"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if patient.is_active %}
+                        <span class="status-badge status-active">
+                            <i class="fas fa-check-circle"></i> Активен
+                        </span>
+                        {% else %}
+                        <span class="status-badge status-inactive">
+                            <i class="fas fa-times-circle"></i> Неактивен
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {{ patient.created_date.strftime('%d.%m.%Y') if patient.created_date else 'N/A' }}
+                        </small>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('patient_detail', patient_id=patient.user_id) }}" 
+                               class="btn btn-sm btn-outline" title="Просмотр профиля">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-users-slash"></i>
+            <h3>Пациенты не найдены</h3>
+            <p>Создайте первого пациента с помощью формы выше</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Модальное окно для сброса пароля -->
+<div id="regenerateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Сброс пароля</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Вы уверены, что хотите сгенерировать новый пароль для пациента <strong id="patientName"></strong>?</p>
+            <p class="text-warning">Старый пароль будет утерян!</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelRegenerate">Отмена</button>
+            <button class="btn btn-danger" id="confirmRegenerate">Сгенерировать новый пароль</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.user-credentials {
+    background: var(--primary-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.btn-copy {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-copy:hover {
+    background: var(--primary-bg);
+    color: var(--primary);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.text-warning {
+    color: var(--warning);
+    font-weight: 500;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Копирование логина и пароля
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const text = this.getAttribute('data-text');
+            navigator.clipboard.writeText(text).then(() => {
+                // Показываем уведомление об успешном копировании
+                showToast('Скопировано в буфер обмена!', 'success');
+            }).catch(err => {
+                console.error('Ошибка копирования: ', err);
+                showToast('Ошибка копирования', 'error');
+            });
+        });
+    });
+    
+    // Модальное окно сброса пароля
+    const modal = document.getElementById('regenerateModal');
+    const regenerateBtns = document.querySelectorAll('.btn-regenerate');
+    const patientNameSpan = document.getElementById('patientName');
+    const cancelBtn = document.getElementById('cancelRegenerate');
+    const confirmBtn = document.getElementById('confirmRegenerate');
+    
+    let currentPatientId = '';
+    
+    regenerateBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentPatientId = this.getAttribute('data-patient-id');
+            const patientName = this.getAttribute('data-patient-name');
+            patientNameSpan.textContent = patientName;
+            modal.style.display = 'block';
+        });
+    });
+    
+    cancelBtn.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    confirmBtn.addEventListener('click', function() {
+        regeneratePassword(currentPatientId);
+        modal.style.display = 'none';
+    });
+    
+    // Закрытие модального окна при клике вне его
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    function regeneratePassword(patientId) {
+        // Запрос к API для сброса пароля
+        fetch(`/api/patient/${patientId}/reset-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Новый пароль сгенерирован: ' + data.new_password, 'success');
+                // Обновляем страницу через 2 секунды
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                showToast('Ошибка при сбросе пароля: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Ошибка при сбросе пароля', 'error');
+        });
+    }
+    
+    function showToast(message, type) {
+        // Создаем временное уведомление
+        const toast = document.createElement('div');
+        toast.className = `flash-message flash-${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '10000';
+        toast.style.animation = 'slideInRight 0.3s ease-out';
+        
+        document.body.appendChild(toast);
+        
+        // Удаляем через 5 секунд
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}
