@@ -1,0 +1,686 @@
+{% extends "base.html" %}
+
+{% block title %}Центр справки - METANOIA{% endblock %}
+
+{% block content %}
+<div class="help-container">
+    <div class="help-header">
+        <h1><i class="fas fa-question-circle"></i> Центр справки</h1>
+        <p>Документация, руководства и поддержка по системе VR-терапии</p>
+    </div>
+
+    <div class="help-search">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="helpSearch" placeholder="Поиск по справке...">
+        </div>
+    </div>
+
+    <div class="help-sections">
+        <!-- Быстрый доступ -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bolt"></i> Быстрый доступ
+                </h3>
+            </div>
+            <div class="quick-help-grid">
+                <a href="{{ url_for('help_demo') }}" class="quick-help-card">
+                    <div class="help-icon">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    <div class="help-content">
+                        <h4>Демо-презентация</h4>
+                        <p>Обзор возможностей системы</p>
+                    </div>
+                </a>
+                <a href="{{ url_for('help_instructions') }}" class="quick-help-card">
+                    <div class="help-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="help-content">
+                        <h4>Руководство пользователя</h4>
+                        <p>Подробные инструкции по работе</p>
+                    </div>
+                </a>
+                {% if session.role == 'therapist' %}
+                <a href="{{ url_for('therapist_training') }}" class="quick-help-card">
+                    <div class="help-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="help-content">
+                        <h4>Обучение терапевтов</h4>
+                        <p>Подготовка и лицензирование</p>
+                    </div>
+                </a>
+                {% endif %}
+                <div class="quick-help-card" onclick="showContactModal()">
+                    <div class="help-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <div class="help-content">
+                        <h4>Техническая поддержка</h4>
+                        <p>Помощь и консультации</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- Для терапевтов -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-user-md"></i> Для терапевтов
+                    </h3>
+                </div>
+                <div class="help-links">
+                    <a href="#" class="help-link" data-category="therapy">
+                        <i class="fas fa-brain"></i>
+                        <div>
+                            <strong>Основы VR-терапии ПТСР</strong>
+                            <span>Методология и принципы работы</span>
+                        </div>
+                    </a>
+                    <a href="#" class="help-link" data-category="safety">
+                        <i class="fas fa-shield-alt"></i>
+                        <div>
+                            <strong>Протоколы безопасности</strong>
+                            <span>Экстренные ситуации и действия</span>
+                        </div>
+                    </a>
+                    <a href="#" class="help-link" data-category="sessions">
+                        <i class="fas fa-vr-cardboard"></i>
+                        <div>
+                            <strong>Проведение сессий</strong>
+                            <span>Настройка и управление VR-сеансами</span>
+                        </div>
+                    </a>
+                    <a href="#" class="help-link" data-category="analytics">
+                        <i class="fas fa-chart-bar"></i>
+                        <div>
+                            <strong>Аналитика и отчетность</strong>
+                            <span>Мониторинг прогресса пациентов</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Для пациентов -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-user"></i> Для пациентов
+                    </h3>
+                </div>
+                <div class="help-links">
+                    <a href="#" class="help-link" data-category="patient-guide">
+                        <i class="fas fa-compass"></i>
+                        <div>
+                            <strong>Начало работы</strong>
+                            <span>Первые шаги в системе</span>
+                        </div>
+                    </a>
+                    <a href="#" class="help-link" data-category="progress">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <strong>Отслеживание прогресса</strong>
+                            <span>Как работать с графиками SUD</span>
+                        </div>
+                    </a>
+                    <a href="#" class="help-link" data-category="modules">
+                        <i class="fas fa-cube"></i>
+                        <div>
+                            <strong>Модули терапии</strong>
+                            <span>Описание всех доступных методов</span>
+                        </div>
+                    </a>
+                    <a href="#" class="help-link" data-category="faq">
+                        <i class="fas fa-question"></i>
+                        <div>
+                            <strong>Частые вопросы</strong>
+                            <span>Ответы на популярные вопросы</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Техническая информация -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-cogs"></i> Техническая информация
+                </h3>
+            </div>
+            <div class="tech-info-grid">
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-desktop"></i>
+                    </div>
+                    <div class="tech-content">
+                        <h4>Системные требования</h4>
+                        <ul>
+                            <li>Windows 10/11 или macOS 10.15+</li>
+                            <li>8 GB RAM минимум</li>
+                            <li>VR-гарнитура Oculus Quest 2/3/Pro</li>
+                            <li>Стабильное интернет-соединение</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="tech-content">
+                        <h4>Версия системы</h4>
+                        <div class="version-info">
+                            <strong>METANOIA Platform</strong>
+                            <span>Версия 2.1.0</span>
+                            <span>Сборка 2024.01</span>
+                            <span class="status-badge status-active">Активная</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="tech-content">
+                        <h4>Безопасность данных</h4>
+                        <ul>
+                            <li>Шифрование данных AES-256</li>
+                            <li>Локальное хранение сессий</li>
+                            <li>Сертификат соответствия ГОСТ</li>
+                            <li>Регулярное резервное копирование</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Частые вопросы -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-question-circle"></i> Частые вопросы
+                </h3>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Как создать нового пациента?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Для создания нового пациента перейдите в раздел "Пациенты" в панели терапевта, нажмите "Добавить пациента", введите ФИО. Система автоматически сгенерирует логин и пароль.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Что делать при сбое VR-оборудования?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Используйте кнопку экстренной остановки. Проверьте подключение гарнитуры, перезапустите приложение. Если проблема persists, обратитесь в техническую поддержку.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Как интерпретировать графики SUD?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Графики показывают динамику субъективной оценки дистресса. Снижение значений между Pre-SUD и Post-SUD указывает на эффективность сессии. Стабильное снижение по сессиям - положительная динамика.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Как обновить лицензию терапевта?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Лицензия действует 1 год. За 30 дней до истечения в профиле появится уведомление. Для обновления необходимо повторно пройти тестирование в разделе "Обучение".</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно техподдержки -->
+<div id="contactModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-headset"></i> Техническая поддержка</h3>
+            <span class="close" onclick="closeContactModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="contact-methods">
+                <div class="contact-method">
+                    <i class="fas fa-phone"></i>
+                    <div>
+                        <strong>Телефон</strong>
+                        <p>+7 (800) 123-45-67</p>
+                        <span>Бесплатно по России</span>
+                    </div>
+                </div>
+                <div class="contact-method">
+                    <i class="fas fa-envelope"></i>
+                    <div>
+                        <strong>Email</strong>
+                        <p>support@vrtherapy.ru</p>
+                        <span>Ответ в течение 24 часов</span>
+                    </div>
+                </div>
+                <div class="contact-method">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <strong>Часы работы</strong>
+                        <p>Пн-Пт: 9:00-18:00</p>
+                        <span>МСК</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="emergency-contact">
+                <h4>Экстренная поддержка VR-сессий</h4>
+                <p>При возникновении критических ситуаций во время VR-сессий:</p>
+                <div class="emergency-number">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>+7 (495) 123-45-67</span>
+                </div>
+                <p class="emergency-note">Круглосуточно, только для действующих сессий</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.help-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.help-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.help-header h1 {
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.help-search {
+    margin-bottom: 2rem;
+}
+
+.search-box {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary);
+}
+
+.search-box input {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    border: 2px solid var(--border);
+    border-radius: 50px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.quick-help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.quick-help-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.quick-help-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.help-icon {
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+.help-content h4 {
+    margin-bottom: 0.25rem;
+    color: var(--dark);
+}
+
+.help-content p {
+    color: var(--secondary);
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.help-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.help-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.3s;
+}
+
+.help-link:hover {
+    background: var(--light);
+}
+
+.help-link i {
+    font-size: 1.25rem;
+    color: var(--primary);
+    width: 24px;
+}
+
+.help-link strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--dark);
+}
+
+.help-link span {
+    color: var(--secondary);
+    font-size: 0.875rem;
+}
+
+.tech-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.tech-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.tech-icon {
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+.tech-content h4 {
+    margin-bottom: 1rem;
+    color: var(--dark);
+}
+
+.tech-content ul {
+    padding-left: 1.5rem;
+    color: var(--secondary);
+}
+
+.tech-content li {
+    margin-bottom: 0.5rem;
+}
+
+.version-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.version-info strong {
+    color: var(--dark);
+}
+
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.faq-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.faq-question {
+    padding: 1.5rem;
+    background: var(--light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.faq-question:hover {
+    background: #e2e8f0;
+}
+
+.faq-answer {
+    padding: 0 1.5rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.faq-item.active .faq-answer {
+    padding: 1.5rem;
+    max-height: 500px;
+}
+
+.faq-item.active .faq-question i {
+    transform: rotate(180deg);
+}
+
+/* Модальное окно */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    animation: modalSlideIn 0.3s;
+}
+
+@keyframes modalSlideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--dark);
+}
+
+.close {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--secondary);
+}
+
+.close:hover {
+    color: var(--dark);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.contact-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.contact-method {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.contact-method i {
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.emergency-contact {
+    background: #fef3c7;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--warning);
+}
+
+.emergency-contact h4 {
+    color: #92400e;
+    margin-bottom: 1rem;
+}
+
+.emergency-number {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #dc2626;
+    margin: 1rem 0;
+}
+
+.emergency-note {
+    font-size: 0.875rem;
+    color: #92400e;
+}
+
+@media (max-width: 768px) {
+    .quick-help-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .tech-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .tech-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+}
+</style>
+
+<script>
+// Поиск по справке
+document.getElementById('helpSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const helpLinks = document.querySelectorAll('.help-link');
+    const faqItems = document.querySelectorAll('.faq-item');
+    
+    helpLinks.forEach(link => {
+        const text = link.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+            link.style.display = 'flex';
+        } else {
+            link.style.display = 'none';
+        }
+    });
+    
+    faqItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// FAQ аккордеон
+document.querySelectorAll('.faq-question').forEach(question => {
+    question.addEventListener('click', function() {
+        const item = this.parentElement;
+        item.classList.toggle('active');
+    });
+});
+
+// Модальное окно
+function showContactModal() {
+    document.getElementById('contactModal').style.display = 'block';
+}
+
+function closeContactModal() {
+    document.getElementById('contactModal').style.display = 'none';
+}
+
+// Закрытие модального окна при клике вне его
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('contactModal');
+    if (e.target === modal) {
+        closeContactModal();
+    }
+});
+</script>
+{% endblock %}

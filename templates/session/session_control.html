@@ -1,0 +1,1937 @@
+{% extends "base.html" %}
+
+{% block title %}Управление сессией - {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="session-control">
+    <!-- Заголовок сессии -->
+    <div class="session-header">
+        <div class="header-info">
+            <h1><i class="fas fa-vr-cardboard"></i> Управление VR-сессией</h1>
+            <div class="patient-info">
+                <strong>Пациент:</strong> {{ patient.name }} (ID: {{ patient.user_id }})
+                <span class="session-timer" id="sessionTimer">--:--</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline" id="editLayoutBtn">
+                <i class="fas fa-edit"></i> Редактировать layout
+            </button>
+            <button class="btn btn-danger" id="emergencyStop">
+                <i class="fas fa-stop-circle"></i> Экстренная остановка
+            </button>
+            <a href="{{ url_for('therapist_dashboard') }}" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Назад к панели
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-layout" id="dashboardLayout">
+        <!-- VR сцена - фиксированный верхний блок -->
+        <div class="widget vr-scene-widget" data-widget-id="vrScene">
+            <div class="widget-header">
+                <h3><i class="fas fa-vr-cardboard"></i> VR-сцена пациента</h3>
+                <div class="widget-controls">
+                    <span class="session-status" id="sessionStatus">
+                        <i class="fas fa-circle status-inactive"></i> Не активно
+                    </span>
+                </div>
+            </div>
+            <div class="widget-content">
+                <div class="vr-scene-container">
+                    <div class="scene-placeholder" id="scenePlaceholder">
+                        <i class="fas fa-vr-cardboard"></i>
+                        <h3>Выберите сценарий для начала симуляции</h3>
+                        <p>Система симуляции VR-терапии готова к работе</p>
+                    </div>
+                    <div class="scene-active" id="sceneActive" style="display: none;">
+                        <div class="scene-view" id="sceneView">
+                            <!-- VR контент будет здесь -->
+                        </div>
+                        <div class="scene-overlay">
+                            <div class="patient-reaction" id="patientReaction">
+                                <!-- Реакции пациента будут здесь -->
+                            </div>
+                            <div class="sud-display">
+                                <span class="sud-label">Текущий SUD:</span>
+                                <span class="sud-value" id="currentSudDisplay">--</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Окно оценки SUD -->
+                        <div class="sud-modal" id="sudModal" style="display: none;">
+                            <div class="sud-modal-content">
+                                <div class="sud-modal-header">
+                                    <h3>Оценка уровня дистресса (SUD)</h3>
+                                    <p>Пожалуйста, оцените ваш текущий уровень субъективного дискомфорта от 1 до 10</p>
+                                </div>
+                                <div class="sud-scale-modal">
+                                    {% for i in range(1, 11) %}
+                                    <button class="sud-btn-modal" data-value="{{ i }}">
+                                        <span class="sud-number">{{ i }}</span>
+                                        <span class="sud-description">
+                                            {% if i == 1 %}Полное спокойствие{% endif %}
+                                            {% if i == 10 %}Максимальная паника{% endif %}
+                                        </span>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                                <div class="sud-modal-phase" id="sudModalPhase">
+                                    Начальная оценка
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Перетаскиваемые виджеты -->
+        <div class="widget control-widget" data-widget-id="scenarioControl">
+            <div class="widget-header">
+                <h3><i class="fas fa-play-circle"></i> Управление сессией</h3>
+            </div>
+            <div class="widget-content">
+                <!-- Выбор сценария -->
+                <div class="scenario-selection">
+                    <h4>Выберите сценарий симуляции:</h4>
+                    <div class="scenarios-list" id="scenariosList">
+                        <!-- Сценарии будут загружены через JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Управление симуляцией -->
+                <div class="simulation-controls" id="simulationControls" style="display: none;">
+                    <h4>Прогресс сессии:</h4>
+                    <div class="session-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-time" id="progressTime">0:00 / 3:00</div>
+                    </div>
+                    
+                    <div class="session-info">
+                        <div class="info-item">
+                            <label>Текущая фаза:</label>
+                            <span id="currentPhase">--</span>
+                        </div>
+                        <div class="info-item">
+                            <label>SCUD пациента:</label>
+                            <span id="patientSud">--</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Реакция:</label>
+                            <span id="patientReactionText">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="widget vital-widget" data-widget-id="vitalSigns">
+            <div class="widget-header">
+                <h3><i class="fas fa-heartbeat"></i> Показатели пациента</h3>
+            </div>
+            <div class="widget-content">
+                <div class="vital-signs-grid">
+                    <div class="vital-card">
+                        <div class="vital-icon heart">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="vital-data">
+                            <div class="vital-value" id="vitalHeartRate">--</div>
+                            <div class="vital-label">Пульс</div>
+                            <div class="vital-unit">уд/мин</div>
+                        </div>
+                        <div class="vital-trend" id="heartRateTrend"></div>
+                    </div>
+                    
+                    <div class="vital-card">
+                        <div class="vital-icon pressure">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div class="vital-data">
+                            <div class="vital-value" id="vitalBloodPressure">--/--</div>
+                            <div class="vital-label">Давление</div>
+                            <div class="vital-unit">мм рт.ст.</div>
+                        </div>
+                        <div class="vital-trend" id="bloodPressureTrend"></div>
+                    </div>
+                    
+                    <div class="vital-card">
+                        <div class="vital-icon temp">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        <div class="vital-data">
+                            <div class="vital-value" id="vitalTemperature">--</div>
+                            <div class="vital-label">Температура</div>
+                            <div class="vital-unit">°C</div>
+                        </div>
+                        <div class="vital-trend" id="temperatureTrend"></div>
+                    </div>
+                    
+                    <div class="vital-card">
+                        <div class="vital-icon stress">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div class="vital-data">
+                            <div class="vital-value" id="vitalStress">--</div>
+                            <div class="vital-label">Уровень стресса</div>
+                            <div class="vital-unit">SUD</div>
+                        </div>
+                        <div class="vital-trend" id="stressTrend"></div>
+                    </div>
+
+                    <div class="vital-card">
+                        <div class="vital-icon respiration">
+                            <i class="fas fa-wind"></i>
+                        </div>
+                        <div class="vital-data">
+                            <div class="vital-value" id="vitalRespiration">--</div>
+                            <div class="vital-label">Дыхание</div>
+                            <div class="vital-unit">дых/мин</div>
+                        </div>
+                        <div class="vital-trend" id="respirationTrend"></div>
+                    </div>
+
+                    <div class="vital-card">
+                        <div class="vital-icon conductance">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="vital-data">
+                            <div class="vital-value" id="vitalConductance">--</div>
+                            <div class="vital-label">КГР</div>
+                            <div class="vital-unit">мкСм</div>
+                        </div>
+                        <div class="vital-trend" id="conductanceTrend"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="widget chat-widget" data-widget-id="patientChat">
+            <div class="widget-header">
+                <h3><i class="fas fa-comments"></i> Диалог с пациентом</h3>
+            </div>
+            <div class="widget-content">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message system">
+                            <div class="message-content">
+                                Система симуляции запущена. Выберите сценарий для начала сессии.
+                            </div>
+                            <div class="message-time" id="initialMessageTime">--:--</div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Введите сообщение для пациента..." disabled>
+                        <button id="sendMessage" class="btn btn-primary" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="widget tools-widget" data-widget-id="sessionTools">
+            <div class="widget-header">
+                <h3><i class="fas fa-tools"></i> Инструменты сессии</h3>
+            </div>
+            <div class="widget-content">
+                <div class="tools-grid">
+                    <button class="tool-btn" id="toolMic" data-tool="microphone">
+                        <i class="fas fa-microphone"></i>
+                        <span>Микрофон</span>
+                    </button>
+                    <button class="tool-btn" id="toolAudio" data-tool="audio">
+                        <i class="fas fa-volume-up"></i>
+                        <span>Аудио</span>
+                    </button>
+                    <button class="tool-btn" id="toolPause" data-tool="pause">
+                        <i class="fas fa-pause"></i>
+                        <span>Пауза</span>
+                    </button>
+                    <button class="tool-btn" id="toolEnvironment" data-tool="environment">
+                        <i class="fas fa-sync"></i>
+                        <span>Смена среды</span>
+                    </button>
+                    <button class="tool-btn" id="toolIntensity" data-tool="intensity">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Интенсивность</span>
+                    </button>
+                    <button class="tool-btn" id="toolGuide" data-tool="guide">
+                        <i class="fas fa-compass"></i>
+                        <span>Навигация</span>
+                    </button>
+                </div>
+                
+                <div class="tool-controls">
+                    <div class="intensity-control" id="intensityControl" style="display: none;">
+                        <label>Уровень интенсивности экспозиции:</label>
+                        <input type="range" min="0" max="100" value="30" class="slider" id="intensitySlider">
+                        <div class="slider-labels">
+                            <span>Низкая</span>
+                            <span>Высокая</span>
+                        </div>
+                        <div class="intensity-value">
+                            Текущая интенсивность: <span id="intensityValue">30%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="environment-control" id="environmentControl" style="display: none;">
+                        <label>Выбор среды:</label>
+                        <div class="environment-options">
+                            <button class="env-btn" data-environment="safe_place">Безопасное место</button>
+                            <button class="env-btn" data-environment="exposure_city">Город</button>
+                            <button class="env-btn" data-environment="exposure_nature">Природа</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.session-control {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: var(--light);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.header-info h1 {
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+    font-size: 1.5rem;
+}
+
+.patient-info {
+    color: var(--secondary);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Основной layout */
+.dashboard-layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 400px 1fr 1fr;
+    grid-template-areas: 
+        "vrScene vrScene"
+        "scenario vital"
+        "chat tools";
+    gap: 1rem;
+    padding: 1rem;
+    overflow: auto;
+}
+
+.dashboard-layout.edit-mode {
+    cursor: move;
+}
+
+.dashboard-layout.edit-mode .widget {
+    cursor: grab;
+    border: 2px dashed var(--primary);
+}
+
+.dashboard-layout.edit-mode .widget:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.dashboard-layout.edit-mode .widget.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+    transform: rotate(3deg);
+}
+
+/* Стили для виджетов */
+.widget {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+}
+
+.widget-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--light);
+    border-radius: 12px 12px 0 0;
+}
+
+.widget-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--dark);
+}
+
+.widget-content {
+    flex: 1;
+    padding: 1.5rem;
+    overflow: auto;
+}
+
+/* VR сцена */
+.vr-scene-widget {
+    grid-area: vrScene;
+}
+
+.vr-scene-container {
+    height: 100%;
+    background: #1a1a1a;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.scene-placeholder, .scene-active {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+
+.scene-placeholder i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.scene-active {
+    position: relative;
+}
+
+.scene-view {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.scene-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.patient-reaction {
+    flex: 1;
+    font-style: italic;
+    min-height: 20px;
+}
+
+.sud-display {
+    background: var(--primary);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Сценарии */
+.scenarios-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.scenario-item {
+    padding: 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.scenario-item:hover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.scenario-item.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.scenario-name {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+}
+
+.scenario-description {
+    font-size: 0.875rem;
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+}
+
+.scenario-profile {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Управление симуляцией */
+.simulation-controls {
+    margin-top: 1rem;
+}
+
+.session-progress {
+    margin-bottom: 1.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-time {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--secondary);
+    font-weight: 600;
+}
+
+.session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+/* Показатели жизнедеятельности */
+.vital-signs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.vital-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--light);
+    border-radius: 8px;
+    position: relative;
+    min-height: 80px;
+}
+
+.vital-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.vital-icon.heart { background: #ef4444; }
+.vital-icon.pressure { background: #3b82f6; }
+.vital-icon.temp { background: #f59e0b; }
+.vital-icon.stress { background: #8b5cf6; }
+.vital-icon.respiration { background: #10b981; }
+.vital-icon.conductance { background: #ec4899; }
+
+.vital-data {
+    flex: 1;
+    min-width: 0;
+}
+
+.vital-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.vital-label {
+    color: var(--secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.vital-unit {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.vital-trend {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.vital-trend.up {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.vital-trend.down {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.vital-trend.stable {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+/* Чат */
+.chat-container {
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    padding-right: 0.5rem;
+}
+
+.message {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+.message.system {
+    background: var(--light);
+    border-left: 3px solid var(--primary);
+}
+
+.message.patient {
+    background: #e3f2fd;
+    border-left: 3px solid #2196f3;
+}
+
+.message.therapist {
+    background: #f3e5f5;
+    border-left: 3px solid #9c27b0;
+}
+
+.message-content {
+    margin-bottom: 0.25rem;
+    word-wrap: break-word;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+.chat-input {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+}
+
+/* Инструменты */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.5rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tool-btn:hover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.tool-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.tool-btn i {
+    font-size: 1.25rem;
+}
+
+.tool-btn span {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.tool-controls {
+    margin-top: 1rem;
+}
+
+.intensity-control, .environment-control {
+    padding: 1rem;
+    background: var(--light);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.slider {
+    width: 100%;
+    margin: 0.5rem 0;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+}
+
+.intensity-value {
+    text-align: center;
+    font-weight: 600;
+    color: var(--primary);
+    margin-top: 0.5rem;
+}
+
+.environment-options {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.env-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.env-btn:hover {
+    border-color: var(--primary);
+}
+
+.env-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Статусы */
+.status-inactive { color: var(--danger); }
+.status-active { color: var(--success); }
+.status-warning { color: var(--warning); }
+
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 400px repeat(4, auto);
+        grid-template-areas: 
+            "vrScene"
+            "scenario" 
+            "vital"
+            "chat"
+            "tools";
+    }
+    
+    .vital-signs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* SUD индикация */
+.sud-value.sud-high { color: #ef4444; font-weight: bold; }
+.sud-value.sud-medium { color: #f59e0b; font-weight: bold; }
+.sud-value.sud-low { color: #10b981; font-weight: bold; }
+
+.session-status i { margin-right: 0.5rem; }
+
+/* Таймер сессии */
+.session-timer {
+    background: var(--primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Стили для SUD модального окна */
+.sud-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.sud-modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: modalAppear 0.5s ease-out;
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.sud-modal-header h3 {
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.sud-modal-header p {
+    color: var(--secondary);
+    margin-bottom: 2rem;
+}
+
+.sud-scale-modal {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.sud-btn-modal {
+    background: white;
+    border: 3px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sud-btn-modal:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.sud-btn-modal.selected {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.sud-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.sud-description {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.sud-modal-phase {
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 0.75rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Анимация для изменений показателей */
+@keyframes valueChange {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); background: #fef3c7; }
+    100% { transform: scale(1); }
+}
+
+.value-changing {
+    animation: valueChange 0.6s ease;
+}
+
+/* Стили для VR сцен */
+.vr-environment {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Безопасное место - пляж */
+.environment-beach {
+    background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+}
+
+.beach-sky {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    background: linear-gradient(to bottom, #1e3c72 0%, #2a5298 50%, #87CEEB 100%);
+}
+
+.beach-ocean {
+    position: absolute;
+    top: 60%;
+    left: 0;
+    right: 0;
+    height: 20%;
+    background: linear-gradient(to bottom, #1e3c72, #4a90e2);
+    animation: wave 4s ease-in-out infinite;
+}
+
+.beach-sand {
+    position: absolute;
+    top: 80%;
+    left: 0;
+    right: 0;
+    height: 20%;
+    background: linear-gradient(to bottom, #f6d365, #fda085);
+}
+
+.beach-palm {
+    position: absolute;
+    bottom: 20%;
+    left: 20%;
+    width: 100px;
+    height: 150px;
+}
+
+.palm-trunk {
+    position: absolute;
+    bottom: 0;
+    left: 45px;
+    width: 10px;
+    height: 100px;
+    background: #8B4513;
+}
+
+.palm-leaves {
+    position: absolute;
+    bottom: 80px;
+    left: 0;
+    width: 100px;
+    height: 70px;
+    background: #228B22;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+@keyframes wave {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Городская среда */
+.environment-city {
+    background: linear-gradient(to bottom, #87CEEB 0%, #666 100%);
+}
+
+.city-buildings {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70%;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+}
+
+.building {
+    background: #555;
+    width: 60px;
+    margin: 0 10px;
+    position: relative;
+}
+
+.building.windowed:before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 5px;
+    right: 5px;
+    bottom: 10px;
+    background: 
+        linear-gradient(90deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%),
+        linear-gradient(0deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+    background-size: 20px 20px;
+}
+
+/* Природная среда */
+.environment-nature {
+    background: linear-gradient(to bottom, #87CEEB 0%, #228B22 100%);
+}
+
+.nature-mountains {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+}
+
+.mountain {
+    position: absolute;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    border-left: 100px solid transparent;
+    border-right: 100px solid transparent;
+    border-bottom: 200px solid #555;
+}
+
+.mountain:nth-child(1) { left: 10%; border-bottom-color: #666; }
+.mountain:nth-child(2) { left: 40%; border-bottom-color: #777; height: 150px; }
+.mountain:nth-child(3) { left: 70%; border-bottom-color: #888; }
+
+.nature-trees {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.tree {
+    width: 40px;
+    height: 80px;
+    position: relative;
+}
+
+.tree-trunk {
+    position: absolute;
+    bottom: 0;
+    left: 15px;
+    width: 10px;
+    height: 40px;
+    background: #8B4513;
+}
+
+.tree-top {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    width: 40px;
+    height: 50px;
+    background: #228B22;
+    border-radius: 50%;
+}
+</style>
+
+<script>
+class SessionSimulation {
+    constructor(patientId) {
+        this.patientId = patientId;
+        this.currentScenario = null;
+        this.isSimulationActive = false;
+        this.currentPhase = null;
+        this.scenarios = [];
+        this.isEditMode = false;
+        this.previousVitalSigns = {};
+        this.sessionTimer = null;
+        this.sessionStartTime = null;
+        this.sessionDuration = 3 * 60 * 1000; // 3 минуты в миллисекундах
+        this.sudCheckpoints = [15, 90, 180]; // секунды для оценки SUD
+        this.currentCheckpointIndex = 0;
+        this.vitalSignsInterval = null;
+        
+        this.initializeEventListeners();
+        this.loadScenarios();
+        this.initializeChatTime();
+    }
+
+    initializeEventListeners() {
+        // Кнопка редактирования layout
+        document.getElementById('editLayoutBtn').addEventListener('click', () => {
+            this.toggleEditMode();
+        });
+
+        // Экстренная остановка
+        document.getElementById('emergencyStop').addEventListener('click', () => {
+            this.emergencyStop();
+        });
+
+        // Кнопки SUD в модальном окне
+        document.querySelectorAll('.sud-btn-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const value = parseInt(e.currentTarget.dataset.value);
+                this.submitSUD(value);
+            });
+        });
+
+        // Инструменты
+        document.getElementById('toolIntensity').addEventListener('click', () => {
+            this.toggleToolControl('intensityControl');
+        });
+
+        document.getElementById('toolEnvironment').addEventListener('click', () => {
+            this.toggleToolControl('environmentControl');
+        });
+
+        // Слайдер интенсивности
+        document.getElementById('intensitySlider').addEventListener('input', (e) => {
+            this.updateIntensity(parseInt(e.target.value));
+        });
+
+        // Кнопки среды
+        document.querySelectorAll('.env-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.selectEnvironment(e.target.dataset.environment);
+            });
+        });
+
+        // Чат
+        document.getElementById('sendMessage').addEventListener('click', () => {
+            this.sendMessage();
+        });
+
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.sendMessage();
+            }
+        });
+    }
+
+    initializeChatTime() {
+        const now = new Date();
+        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0');
+        document.getElementById('initialMessageTime').textContent = timeString;
+    }
+
+    async loadScenarios() {
+        try {
+            const response = await fetch('/api/session/scenarios');
+            this.scenarios = await response.json();
+            this.renderScenarios();
+        } catch (error) {
+            console.error('Ошибка загрузки сценариев:', error);
+            this.showMessage('Ошибка загрузки сценариев', 'error');
+        }
+    }
+
+    renderScenarios() {
+        const container = document.getElementById('scenariosList');
+        container.innerHTML = '';
+        
+        this.scenarios.forEach(scenario => {
+            const scenarioElement = document.createElement('div');
+            scenarioElement.className = 'scenario-item';
+            scenarioElement.innerHTML = `
+                <div class="scenario-name">${scenario.name}</div>
+                <div class="scenario-description">${scenario.description}</div>
+                <div class="scenario-profile">${scenario.patient_profile}</div>
+                <div class="scenario-sud">Начальный SUD: ${scenario.initial_sud}</div>
+            `;
+            
+            scenarioElement.addEventListener('click', () => {
+                this.selectScenario(scenario);
+            });
+            
+            container.appendChild(scenarioElement);
+        });
+    }
+
+    async selectScenario(scenario) {
+        document.querySelectorAll('.scenario-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        event.target.closest('.scenario-item').classList.add('selected');
+        
+        this.currentScenario = scenario;
+        
+        try {
+            const response = await fetch('/api/session/start_scenario', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    scenario_id: scenario.id,
+                    patient_id: this.patientId
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                this.isSimulationActive = true;
+                this.showSimulationControls();
+                this.updateVRScene(scenario.environment);
+                this.updateSessionStatus('active');
+                this.addChatMessage('system', `Симуляция запущена: ${scenario.name}`);
+                this.addChatMessage('system', `Пациент: ${scenario.patient_profile}`);
+                
+                // Запускаем сессию
+                this.startSession();
+                this.showMessage('Симуляция успешно запущена', 'success');
+            }
+        } catch (error) {
+            console.error('Ошибка запуска сценария:', error);
+            this.showMessage('Ошибка запуска сценария', 'error');
+        }
+    }
+
+    showSimulationControls() {
+        document.getElementById('simulationControls').style.display = 'block';
+        
+        // Активируем чат
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendMessage').disabled = false;
+    }
+
+    updateVRScene(environment) {
+        document.getElementById('scenePlaceholder').style.display = 'none';
+        document.getElementById('sceneActive').style.display = 'block';
+        
+        const sceneView = document.getElementById('sceneView');
+        sceneView.className = 'scene-view';
+        
+        let sceneHTML = '';
+        
+        switch(environment) {
+            case 'safe_place':
+                sceneView.classList.add('environment-beach');
+                sceneHTML = `
+                    <div class="beach-sky"></div>
+                    <div class="beach-ocean"></div>
+                    <div class="beach-sand"></div>
+                    <div class="beach-palm">
+                        <div class="palm-trunk"></div>
+                        <div class="palm-leaves"></div>
+                    </div>
+                `;
+                break;
+            case 'exposure_city':
+                sceneView.classList.add('environment-city');
+                sceneHTML = `
+                    <div class="city-buildings">
+                        <div class="building windowed" style="height: 70%;"></div>
+                        <div class="building windowed" style="height: 85%;"></div>
+                        <div class="building windowed" style="height: 60%;"></div>
+                        <div class="building windowed" style="height: 75%;"></div>
+                        <div class="building windowed" style="height: 65%;"></div>
+                    </div>
+                `;
+                break;
+            case 'exposure_nature':
+                sceneView.classList.add('environment-nature');
+                sceneHTML = `
+                    <div class="nature-mountains">
+                        <div class="mountain"></div>
+                        <div class="mountain"></div>
+                        <div class="mountain"></div>
+                    </div>
+                    <div class="nature-trees">
+                        <div class="tree">
+                            <div class="tree-trunk"></div>
+                            <div class="tree-top"></div>
+                        </div>
+                        <div class="tree">
+                            <div class="tree-trunk"></div>
+                            <div class="tree-top"></div>
+                        </div>
+                        <div class="tree">
+                            <div class="tree-trunk"></div>
+                            <div class="tree-top"></div>
+                        </div>
+                    </div>
+                `;
+                break;
+        }
+        
+        sceneView.innerHTML = sceneHTML;
+    }
+
+    startSession() {
+        this.sessionStartTime = Date.now();
+        this.currentCheckpointIndex = 0;
+        
+        // Запускаем таймер сессии
+        this.sessionTimer = setInterval(() => {
+            this.updateSessionTimer();
+        }, 1000);
+        
+        // Запускаем мониторинг показателей
+        this.startVitalSignsMonitoring();
+        
+        // Начальная оценка SUD через 15 секунд
+        setTimeout(() => {
+            this.showSUDPrompt('pre', 'Начальная оценка');
+        }, 15000);
+        
+        // Промежуточная оценка через 90 секунд
+        setTimeout(() => {
+            if (this.isSimulationActive) {
+                this.showSUDPrompt('during', 'Промежуточная оценка');
+            }
+        }, 90000);
+        
+        // Финальная оценка через 180 секунд
+        setTimeout(() => {
+            if (this.isSimulationActive) {
+                this.showSUDPrompt('post', 'Финальная оценка');
+            }
+        }, 180000);
+    }
+
+    updateSessionTimer() {
+        if (!this.sessionStartTime) return;
+        
+        const elapsed = Date.now() - this.sessionStartTime;
+        const remaining = Math.max(0, this.sessionDuration - elapsed);
+        
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        
+        // Обновляем таймер
+        document.getElementById('sessionTimer').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Обновляем прогресс-бар
+        const progress = (elapsed / this.sessionDuration) * 100;
+        document.getElementById('progressFill').style.width = `${Math.min(progress, 100)}%`;
+        
+        // Обновляем время прогресса
+        const elapsedMinutes = Math.floor(elapsed / 60000);
+        const elapsedSeconds = Math.floor((elapsed % 60000) / 1000);
+        document.getElementById('progressTime').textContent = 
+            `${elapsedMinutes}:${elapsedSeconds.toString().padStart(2, '0')} / 3:00`;
+        
+        // Завершение сессии по таймеру
+        if (remaining <= 0) {
+            this.completeSession();
+        }
+    }
+
+    showSUDPrompt(phase, phaseName) {
+        if (!this.isSimulationActive) return;
+        
+        const modal = document.getElementById('sudModal');
+        const phaseElement = document.getElementById('sudModalPhase');
+        
+        // Устанавливаем ожидаемое значение SUD по сценарию
+        let expectedSud;
+        switch(phase) {
+            case 'pre':
+                expectedSud = this.currentScenario.initial_sud;
+                break;
+            case 'during':
+                expectedSud = this.currentScenario.expected_progress[0];
+                break;
+            case 'post':
+                expectedSud = this.currentScenario.expected_progress[2];
+                break;
+        }
+        
+        phaseElement.textContent = phaseName;
+        modal.style.display = 'flex';
+        
+        // Автоматически "выбираем" ожидаемое значение через 2 секунды
+        setTimeout(() => {
+            if (modal.style.display !== 'none') {
+                this.autoSelectSUD(expectedSud, phase);
+            }
+        }, 2000);
+    }
+
+    autoSelectSUD(sudValue, phase) {
+        // Визуально выделяем кнопку
+        document.querySelectorAll('.sud-btn-modal').forEach(btn => {
+            btn.classList.remove('selected');
+            if (parseInt(btn.dataset.value) === sudValue) {
+                btn.classList.add('selected');
+            }
+        });
+        
+        // Через еще 1 секунду отправляем оценку
+        setTimeout(() => {
+            this.submitSUD(sudValue, phase);
+        }, 1000);
+    }
+
+    async submitSUD(sudValue, phase = null) {
+        if (!phase) {
+            phase = this.currentCheckpointIndex === 0 ? 'pre' : 
+                   this.currentCheckpointIndex === 2 ? 'post' : 'during';
+        }
+        
+        try {
+            const response = await fetch('/api/session/submit_sud', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    patient_id: this.patientId,
+                    sud_value: sudValue,
+                    phase: phase
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Скрываем модальное окно
+                document.getElementById('sudModal').style.display = 'none';
+                
+                // Обновляем интерфейс
+                this.updateSUDDisplay(sudValue);
+                this.showPatientReaction(data.patient_reaction);
+                
+                this.addChatMessage('patient', data.patient_reaction);
+                this.addChatMessage('system', `SUD оценка: ${sudValue} (${this.getPhaseName(phase)})`);
+                
+                this.currentCheckpointIndex++;
+                
+                this.showMessage(`SUD оценка принята: ${sudValue}`, 'success');
+                
+                // Обновляем фазу в интерфейсе
+                document.getElementById('currentPhase').textContent = this.getPhaseName(phase);
+                document.getElementById('patientSud').textContent = sudValue;
+                document.getElementById('patientReactionText').textContent = data.patient_reaction;
+            }
+        } catch (error) {
+            console.error('Ошибка отправки SUD:', error);
+            this.showMessage('Ошибка отправки оценки', 'error');
+        }
+    }
+
+    startVitalSignsMonitoring() {
+        // Сначала обновляем сразу
+        this.updateVitalSigns();
+        
+        // Затем каждые 3 секунды
+        this.vitalSignsInterval = setInterval(() => {
+            this.updateVitalSigns();
+        }, 3000);
+    }
+
+    async updateVitalSigns() {
+        if (!this.isSimulationActive) return;
+        
+        try {
+            const response = await fetch(`/api/session/vital_signs/${this.patientId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayVitalSigns(data.vital_signs);
+            }
+        } catch (error) {
+            console.error('Ошибка обновления показателей:', error);
+        }
+    }
+
+    displayVitalSigns(signs) {
+        // Сохраняем предыдущие значения для сравнения
+        const previous = { ...this.previousVitalSigns };
+        this.previousVitalSigns = { ...signs };
+
+        // Обновляем значения с анимацией
+        this.updateVitalValue('vitalHeartRate', signs.heart_rate, previous.heart_rate);
+        this.updateVitalValue('vitalBloodPressure', signs.blood_pressure, previous.blood_pressure);
+        this.updateVitalValue('vitalTemperature', signs.temperature + '°C', previous.temperature);
+        this.updateVitalValue('vitalStress', signs.stress_level, previous.stress_level);
+        this.updateVitalValue('vitalRespiration', signs.respiration_rate, previous.respiration_rate);
+        this.updateVitalValue('vitalConductance', signs.skin_conductance.toFixed(1), previous.skin_conductance);
+
+        // Обновляем тренды
+        this.updateVitalTrend('heartRate', signs.heart_rate, previous.heart_rate);
+        this.updateVitalTrend('stress', signs.stress_level, previous.stress_level);
+        this.updateVitalTrend('respiration', signs.respiration_rate, previous.respiration_rate);
+    }
+
+    updateVitalValue(elementId, newValue, oldValue) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        if (element.textContent !== newValue.toString()) {
+            element.textContent = newValue;
+            element.classList.add('value-changing');
+            setTimeout(() => element.classList.remove('value-changing'), 600);
+        }
+    }
+
+    updateVitalTrend(type, current, previous) {
+        if (previous === undefined) return;
+        
+        const trendElement = document.getElementById(type + 'Trend');
+        if (!trendElement) return;
+        
+        const diff = current - previous;
+        let trendClass = 'stable';
+        let trendIcon = '=';
+
+        if (Math.abs(diff) > 0.1) {
+            if (diff > 0) {
+                trendClass = 'up';
+                trendIcon = '↑';
+            } else {
+                trendClass = 'down';
+                trendIcon = '↓';
+            }
+        }
+
+        trendElement.className = 'vital-trend ' + trendClass;
+        trendElement.textContent = trendIcon + (diff !== 0 ? Math.abs(diff).toFixed(1) : '');
+    }
+
+    updateSUDDisplay(sudValue) {
+        document.getElementById('currentSudDisplay').textContent = sudValue;
+        document.getElementById('patientSud').textContent = sudValue;
+        document.getElementById('vitalStress').textContent = sudValue;
+        
+        const sudDisplay = document.getElementById('currentSudDisplay');
+        sudDisplay.className = 'sud-value';
+        
+        if (sudValue >= 7) {
+            sudDisplay.classList.add('sud-high');
+        } else if (sudValue >= 4) {
+            sudDisplay.classList.add('sud-medium');
+        } else {
+            sudDisplay.classList.add('sud-low');
+        }
+    }
+
+    showPatientReaction(reaction) {
+        const reactionElement = document.getElementById('patientReaction');
+        reactionElement.textContent = `"${reaction}"`;
+        
+        reactionElement.style.opacity = '0';
+        reactionElement.style.transform = 'translateY(10px)';
+        
+        setTimeout(() => {
+            reactionElement.style.opacity = '1';
+            reactionElement.style.transform = 'translateY(0)';
+            reactionElement.style.transition = 'all 0.3s ease';
+        }, 100);
+    }
+
+    updateSessionStatus(status) {
+        const statusElement = document.getElementById('sessionStatus');
+        statusElement.innerHTML = '';
+        
+        let statusHTML = '';
+        switch(status) {
+            case 'active':
+                statusHTML = '<i class="fas fa-circle status-active"></i> Сессия активна';
+                break;
+            case 'inactive':
+                statusHTML = '<i class="fas fa-circle status-inactive"></i> Не активно';
+                break;
+            case 'paused':
+                statusHTML = '<i class="fas fa-circle status-warning"></i> На паузе';
+                break;
+        }
+        
+        statusElement.innerHTML = statusHTML;
+    }
+
+    addChatMessage(type, content) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${type}`;
+        
+        const now = new Date();
+        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0');
+        
+        messageElement.innerHTML = `
+            <div class="message-content">${content}</div>
+            <div class="message-time">${timeString}</div>
+        `;
+        
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    toggleEditMode() {
+        this.isEditMode = !this.isEditMode;
+        const layout = document.getElementById('dashboardLayout');
+        const editBtn = document.getElementById('editLayoutBtn');
+        
+        if (this.isEditMode) {
+            layout.classList.add('edit-mode');
+            editBtn.innerHTML = '<i class="fas fa-check"></i> Завершить редактирование';
+            editBtn.classList.add('btn-primary');
+            this.initializeDragAndDrop();
+        } else {
+            layout.classList.remove('edit-mode');
+            editBtn.innerHTML = '<i class="fas fa-edit"></i> Редактировать layout';
+            editBtn.classList.remove('btn-primary');
+            this.destroyDragAndDrop();
+        }
+    }
+
+    initializeDragAndDrop() {
+        const widgets = document.querySelectorAll('.widget:not(.vr-scene-widget)');
+        
+        widgets.forEach(widget => {
+            widget.setAttribute('draggable', 'true');
+            
+            widget.addEventListener('dragstart', (e) => {
+                if (!this.isEditMode) {
+                    e.preventDefault();
+                    return;
+                }
+                e.dataTransfer.setData('text/plain', widget.dataset.widgetId);
+                widget.classList.add('dragging');
+                setTimeout(() => widget.style.display = 'none', 0);
+            });
+            
+            widget.addEventListener('dragend', () => {
+                if (!this.isEditMode) return;
+                widget.classList.remove('dragging');
+                widget.style.display = 'flex';
+            });
+        });
+
+        const layout = document.getElementById('dashboardLayout');
+        
+        layout.addEventListener('dragover', (e) => {
+            if (!this.isEditMode) return;
+            e.preventDefault();
+            const afterElement = this.getDragAfterElement(layout, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            
+            if (afterElement) {
+                layout.insertBefore(draggable, afterElement);
+            } else {
+                layout.appendChild(draggable);
+            }
+        });
+    }
+
+    destroyDragAndDrop() {
+        const widgets = document.querySelectorAll('.widget');
+        widgets.forEach(widget => {
+            widget.removeAttribute('draggable');
+            widget.classList.remove('dragging');
+        });
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.widget:not(.dragging):not(.vr-scene-widget)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    toggleToolControl(controlId) {
+        const control = document.getElementById(controlId);
+        const isVisible = control.style.display !== 'none';
+        
+        // Скрываем все контролы
+        document.querySelectorAll('.tool-controls > div').forEach(ctrl => {
+            ctrl.style.display = 'none';
+        });
+        
+        // Показываем/скрываем выбранный контрол
+        if (!isVisible) {
+            control.style.display = 'block';
+        }
+    }
+
+    updateIntensity(value) {
+        document.getElementById('intensityValue').textContent = value + '%';
+        this.addChatMessage('system', `Интенсивность экспозиции установлена: ${value}%`);
+    }
+
+    selectEnvironment(environment) {
+        document.querySelectorAll('.env-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        this.updateVRScene(environment);
+        this.addChatMessage('system', `Среда изменена: ${this.getEnvironmentName(environment)}`);
+    }
+
+    getEnvironmentName(environment) {
+        const names = {
+            'safe_place': 'Безопасное место',
+            'exposure_city': 'Городская среда', 
+            'exposure_nature': 'Природная среда'
+        };
+        return names[environment] || environment;
+    }
+
+    getPhaseName(phase) {
+        const phaseNames = {
+            'pre': 'Начальная оценка',
+            'during': 'Промежуточная оценка', 
+            'post': 'Финальная оценка'
+        };
+        return phaseNames[phase] || phase;
+    }
+
+    sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        
+        if (message && this.isSimulationActive) {
+            this.addChatMessage('therapist', message);
+            input.value = '';
+            
+            setTimeout(() => {
+                const responses = [
+                    "Понял вас, продолжаю...",
+                    "Спасибо за поддержку",
+                    "Стараюсь следовать инструкциям",
+                    "Чувствую себя немного лучше",
+                    "Пытаюсь контролировать дыхание"
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                this.addChatMessage('patient', randomResponse);
+            }, 1000);
+        }
+    }
+
+    completeSession() {
+        this.addChatMessage('system', 'Сессия завершена по таймеру');
+        this.showMessage('Сессия успешно завершена', 'success');
+        this.stopSimulation();
+    }
+
+    async emergencyStop() {
+        if (confirm('🚨 ВНИМАНИЕ: Вы уверены, что хотите экстренно остановить сессию? Это действие немедленно прекратит все стимулы и вернет пациента в безопасную среду.')) {
+            try {
+                const response = await fetch('/api/session/simulation/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.stopSimulation();
+                    this.addChatMessage('system', '🚨 СЕССИЯ ЭКСТРЕННО ОСТАНОВЛЕНА');
+                    this.showMessage('Сессия экстренно остановлена', 'warning');
+                }
+            } catch (error) {
+                console.error('Ошибка остановки симуляции:', error);
+                this.showMessage('Ошибка остановки симуляции', 'error');
+            }
+        }
+    }
+
+    stopSimulation() {
+        this.isSimulationActive = false;
+        this.currentScenario = null;
+        this.currentPhase = null;
+        
+        // Останавливаем таймеры
+        if (this.sessionTimer) {
+            clearInterval(this.sessionTimer);
+            this.sessionTimer = null;
+        }
+        
+        if (this.vitalSignsInterval) {
+            clearInterval(this.vitalSignsInterval);
+            this.vitalSignsInterval = null;
+        }
+        
+        this.updateSessionStatus('inactive');
+        this.hideSimulationControls();
+        this.resetVRScene();
+        this.resetVitalSigns();
+        
+        // Сбрасываем UI
+        document.querySelectorAll('.scenario-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        document.getElementById('sessionTimer').textContent = '--:--';
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('sendMessage').disabled = true;
+        
+        // Скрываем модальное окно SUD если открыто
+        document.getElementById('sudModal').style.display = 'none';
+    }
+
+    hideSimulationControls() {
+        document.getElementById('simulationControls').style.display = 'none';
+    }
+
+    resetVRScene() {
+        document.getElementById('sceneActive').style.display = 'none';
+        document.getElementById('scenePlaceholder').style.display = 'flex';
+    }
+
+    resetVitalSigns() {
+        document.getElementById('vitalHeartRate').textContent = '--';
+        document.getElementById('vitalBloodPressure').textContent = '--/--';
+        document.getElementById('vitalTemperature').textContent = '--';
+        document.getElementById('vitalStress').textContent = '--';
+        document.getElementById('vitalRespiration').textContent = '--';
+        document.getElementById('vitalConductance').textContent = '--';
+        
+        // Сбрасываем тренды
+        document.querySelectorAll('.vital-trend').forEach(trend => {
+            trend.className = 'vital-trend';
+            trend.textContent = '';
+        });
+        
+        // Сбрасываем информацию о сессии
+        document.getElementById('currentPhase').textContent = '--';
+        document.getElementById('patientSud').textContent = '--';
+        document.getElementById('patientReactionText').textContent = '--';
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('progressTime').textContent = '0:00 / 3:00';
+    }
+
+    showMessage(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `flash-message flash-${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '10000';
+        toast.style.animation = 'slideInRight 0.3s ease-out';
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const patientId = '{{ patient.user_id }}';
+    window.sessionSimulation = new SessionSimulation(patientId);
+});
+</script>
+{% endblock %}

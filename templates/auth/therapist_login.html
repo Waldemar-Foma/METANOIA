@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход для терапевтов - METANOIA</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="auth-body">
+    <div class="auth-container therapist-login">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <i class="fas fa-user-md"></i>
+                    <h1>Терапевты</h1>
+                </div>
+                <p class="auth-subtitle">Панель управления терапией</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="fas fa-user"></i> Логин терапевта
+                    </label>
+                    <input type="text" id="username" name="username" class="form-input" 
+                           placeholder="Введите логин терапевта" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="fas fa-lock"></i> Пароль
+                    </label>
+                    <input type="password" id="password" name="password" class="form-input" 
+                           placeholder="Введите пароль" required>
+                </div>
+
+                <button type="submit" class="auth-btn therapist-btn">
+                    <i class="fas fa-sign-in-alt"></i> Войти как терапевт
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="{{ url_for('login') }}" class="back-link">
+                    <i class="fas fa-arrow-left"></i> Обычный вход
+                </a>
+                <p class="auth-help">
+                    Для доступа к панели управления терапией
+                </p>
+            </div>
+        </div>
+
+        <div class="therapist-features">
+            <h3>Возможности для терапевтов:</h3>
+            <ul class="features-list">
+                <li><i class="fas fa-user-plus"></i> Управление пациентами</li>
+                <li><i class="fas fa-chart-bar"></i> Мониторинг прогресса</li>
+                <li><i class="fas fa-cogs"></i> Настройка параметров терапии</li>
+                <li><i class="fas fa-file-medical"></i> Ведение документации</li>
+                <li><i class="fas fa-vr-cardboard"></i> Управление VR-сессиями</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

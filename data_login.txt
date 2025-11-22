@@ -1,0 +1,22 @@
+=== VR THERAPY SYSTEM - QUICK LOGIN ===
+Version: 0.1.
+
+--- THERAPISTS ---
+therapist / therapy123 (Др. Смирнова)
+doctor2 / doctor123 (Др. Петров)
+licensed_doc / license123
+
+--- PATIENTS ---
+pt001234 / pass123 (Иван Петров)
+pt002345 / pass123 (Мария Сидорова)
+pt003456 / pass123 (Алексей Иванов)
+
+--- IMPORTANT ---
+
+Therapists need to complete training first
+
+Training includes theory and test (80% required)
+
+License valid for 1 year after passing test
+
+New patients get auto-generated credentials

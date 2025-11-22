@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METANOIA - {% block title %}{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    {% if session.user_id %}
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-vr-cardboard"></i>
+                <span>METANOIA</span>
+            </div>
+            <div class="nav-links">
+                {% if session.role == 'therapist' %}
+                    {% if session.is_licensed %}
+                    <a href="{{ url_for('therapist_dashboard') }}" class="nav-link">
+                        <i class="fas fa-home"></i> Панель управления
+                    </a>
+                    <a href="{{ url_for('therapist_patient_management') }}" class="nav-link">
+                        <i class="fas fa-users"></i> Пациенты
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('therapist_profile') }}" class="nav-link">
+                        <i class="fas fa-home"></i> Мой профиль
+                    </a>
+                    {% endif %}
+                {% else %}
+                <a href="{{ url_for('patient_dashboard') }}" class="nav-link">
+                    <i class="fas fa-home"></i> Моя панель
+                </a>
+                <a href="{{ url_for('patient_sessions') }}" class="nav-link">
+                    <i class="fas fa-chart-line"></i> Мои сессии
+                </a>
+                {% endif %}
+            </div>
+            <div class="nav-right">
+                <a href="{{ url_for('help_page') }}" class="nav-link help-link">
+                    <i class="fas fa-question-circle"></i> Справка
+                </a>
+                <div class="nav-user">
+                    {% if session.role == 'therapist' and session.is_licensed %}
+                    <span class="license-badge licensed" title="Лицензия активна">
+                        <i class="fas fa-certificate"></i> Лицензирован
+                    </span>
+                    {% elif session.role == 'therapist' %}
+                    <span class="license-badge not-licensed" title="Требуется обучение">
+                        <i class="fas fa-exclamation-triangle"></i> Не лицензирован
+                    </span>
+                    {% endif %}
+                    <span class="user-name">{{ session.name }}</span>
+                    <div class="user-dropdown">
+                        <button class="user-menu-btn">
+                            <i class="fas fa-user-circle"></i>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="user-dropdown-content">
+                            <div class="user-info">
+                                <strong>{{ session.name }}</strong>
+                                <span>{{ 'Терапевт' if session.role == 'therapist' else 'Пациент' }}</span>
+                                {% if session.role == 'therapist' and session.license_expires %}
+                                <span class="license-expiry">
+                                    Лицензия до: {{ session.license_expires[:10] }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if session.role == 'therapist' %}
+                            <a href="{{ url_for('therapist_profile') }}" class="dropdown-item">
+                                <i class="fas fa-user"></i> Мой профиль
+                            </a>
+                            {% if not session.is_licensed %}
+                            <a href="{{ url_for('therapist_training') }}" class="dropdown-item">
+                                <i class="fas fa-graduation-cap"></i> Пройти обучение
+                            </a>
+                            {% endif %}
+                            {% endif %}
+                            <a href="{{ url_for('logout') }}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Выйти
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}" id="flash-{{ loop.index }}">
+                            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                            <span>{{ message }}</span>
+                            <button class="close-flash" onclick="closeFlash('flash-{{ loop.index }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <script>
+    function closeFlash(flashId) {
+        const flash = document.getElementById(flashId);
+        if (flash) {
+            flash.classList.add('hiding');
+            setTimeout(() => {
+                flash.remove();
+            }, 300);
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            document.querySelectorAll('.flash-message').forEach(flash => {
+                if (!flash.classList.contains('flash-error')) {
+                    closeFlash(flash.id);
+                }
+            });
+        }, 5000);
+    });
+    
+    // Закрытие при клике на уведомление
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.flash-message') && !e.target.closest('.close-flash')) {
+            const flash = e.target.closest('.flash-message');
+            closeFlash(flash.id);
+        }
+    });
+
+    // Закрытие dropdown при клике вне его
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.user-dropdown')) {
+            document.querySelectorAll('.user-dropdown-content').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+        }
+    });
+
+    // Открытие/закрытие dropdown пользователя
+    document.querySelectorAll('.user-menu-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdown = this.closest('.user-dropdown').querySelector('.user-dropdown-content');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+    });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты тестирования{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    <div class="results-header">
+        {% if result.passed %}
+        <div class="result-success">
+            <i class="fas fa-trophy"></i>
+            <h1>Поздравляем!</h1>
+            <p>Вы успешно прошли тестирование</p>
+        </div>
+        {% else %}
+        <div class="result-failure">
+            <i class="fas fa-redo-alt"></i>
+            <h1>Тестирование не пройдено</h1>
+            <p>Необходимо набрать не менее 80% правильных ответов</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="results-stats">
+        <div class="stat-card">
+            <div class="stat-value {{ 'success' if result.passed else 'failure' }}">
+                {{ result.score }}%
+            </div>
+            <div class="stat-label">Общий результат</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ result.correct_answers }}/{{ result.total_questions }}
+            </div>
+            <div class="stat-label">Правильных ответов</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ (result.total_questions - result.correct_answers) }}/{{ result.total_questions }}
+            </div>
+            <div class="stat-label">Неправильных ответов</div>
+        </div>
+    </div>
+
+    {% if result.passed and license_info %}
+    <div class="license-card success">
+        <div class="license-icon">
+            <i class="fas fa-certificate"></i>
+        </div>
+        <div class="license-info">
+            <h3>Лицензия VR-терапевта активирована</h3>
+            <p>Лицензия действительна до: <strong>{{ license_info.license_expires.strftime('%d.%m.%Y') }}</strong></p>
+            <p>Теперь у вас есть полный доступ к системе VR-терапии</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Детализация ответов -->
+    <div class="answers-detail">
+        <h3>Детализация ответов</h3>
+        {% for answer in result.answers_detail %}
+        <div class="answer-item {{ 'correct' if answer.is_correct else 'incorrect' }}">
+            <div class="answer-header">
+                <span class="question-number">Вопрос {{ loop.index }}</span>
+                <span class="answer-status">
+                    {% if answer.is_correct %}
+                    <i class="fas fa-check"></i> Правильно
+                    {% else %}
+                    <i class="fas fa-times"></i> Неправильно
+                    {% endif %}
+                </span>
+            </div>
+            <div class="question-text">
+                <strong>Вопрос:</strong> {{ answer.question }}
+            </div>
+            <div class="user-answer">
+                <strong>Ваш ответ:</strong> {{ answer.user_answer }}
+            </div>
+            {% if not answer.is_correct %}
+            <div class="correct-answer">
+                <strong>Правильный ответ:</strong> {{ answer.correct_answer }}
+            </div>
+            {% endif %}
+            <div class="answer-explanation">
+                <strong>Объяснение:</strong> {{ answer.explanation }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="results-actions">
+        {% if result.passed %}
+        <a href="{{ url_for('therapist_dashboard') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-tachometer-alt"></i> Перейти к панели управления
+        </a>
+        {% else %}
+        <div class="retry-actions">
+            <a href="{{ url_for('therapist_training') }}" class="btn btn-outline">
+                <i class="fas fa-book"></i> Вернуться к обучению
+            </a>
+            <a href="{{ url_for('therapist_test') }}" class="btn btn-primary">
+                <i class="fas fa-redo"></i> Попробовать снова
+            </a>
+            <p class="retry-note">Следующая попытка доступна через 24 часа</p>
+        </div>
+        {% endif %}
+        
+        <a href="{{ url_for('therapist_profile') }}" class="btn btn-outline">
+            <i class="fas fa-user"></i> Мой профиль
+        </a>
+    </div>
+</div>
+
+<style>
+.results-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.results-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.result-success {
+    color: #166534;
+}
+
+.result-failure {
+    color: #dc2626;
+}
+
+.result-success i,
+.result-failure i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.results-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value.success {
+    color: #16a34a;
+}
+
+.stat-value.failure {
+    color: #dc2626;
+}
+
+.stat-label {
+    color: var(--secondary);
+    font-size: 0.875rem;
+}
+
+.license-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.license-card.success {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    border: 2px solid #16a34a;
+}
+
+.license-icon {
+    font-size: 3rem;
+    color: #16a34a;
+}
+
+.license-info h3 {
+    margin-bottom: 0.5rem;
+    color: #166534;
+}
+
+.answers-detail {
+    margin-bottom: 2rem;
+}
+
+.answers-detail h3 {
+    margin-bottom: 1.5rem;
+    color: var(--dark);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.answer-item {
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border-left: 4px solid;
+}
+
+.answer-item.correct {
+    background: #f0fdf4;
+    border-left-color: #16a34a;
+}
+
+.answer-item.incorrect {
+    background: #fef2f2;
+    border-left-color: #dc2626;
+}
+
+.answer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.question-number {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.answer-status {
+    font-weight: 600;
+}
+
+.answer-item.correct .answer-status {
+    color: #16a34a;
+}
+
+.answer-item.incorrect .answer-status {
+    color: #dc2626;
+}
+
+.question-text,
+.user-answer,
+.correct-answer,
+.answer-explanation {
+    margin-bottom: 0.75rem;
+}
+
+.correct-answer {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.answer-explanation {
+    background: white;
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 3px solid var(--primary);
+}
+
+.results-actions {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.retry-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+}
+
+.retry-note {
+    color: var(--secondary);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .results-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .license-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .answer-header {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: start;
+    }
+}
+</style>
+{% endblock %}
